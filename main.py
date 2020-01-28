@@ -90,6 +90,7 @@ def game_loop():
 
           x += x_change
           y += y_change
+
           game.fill(white)
 
           #objects(objx, objy, objw, objh, colour):
