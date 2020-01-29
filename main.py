@@ -6,8 +6,12 @@ pygame.init()
 
 window_width = 800
 window_height = 600
+
 ship_width = 99
 ship_height = 75
+
+a_width = 75
+a_height = 75
 
 black = (0,0,0)
 white = (255,255,255)
@@ -21,26 +25,31 @@ pygame.display.set_caption('Space Dodging')
 
 clock = pygame.time.Clock()
 
+background = pygame.image.load('background.jpg')
+asteroid = pygame.image.load('asteroid.png')
 sshipimg = pygame.image.load('ship.png')
 
-def scorecard(count):
+def scorecard(count):			#scorecard count
     font = pygame.font.Font('freesansbold.ttf', 25)
     text = font.render("SCORE: "+str(count), True, green)
     game.blit(text,(650,0))
 
-def objects(objx, objy, objw, objh, colour):
-    pygame.draw.rect(game, colour, [objx, objy, objw, objh])
+def bground(a,b):			#background image
+	game.blit(background,(a,b))
 
-def sship(x,y):
+def aroid(ax,ay):			#asteroid image
+	game.blit(asteroid,(ax,ay))
+	
+def sship(x,y):				#spaceship image
     game.blit(sshipimg,(x,y))
 
-def text_objects(text, font):
-    txtSurface = font.render(text, True, red)
+def text_objects(text, font,color):
+    txtSurface = font.render(text, True, color)
     return txtSurface, txtSurface.get_rect()
 
 def message_display(text):
     largeText = pygame.font.Font('freesansbold.ttf',50)
-    TextSurf, TextRect =text_objects(text, largeText)
+    TextSurf, TextRect =text_objects(text, largeText, red)
     TextRect.center = ((window_width/2),(window_height/2))
     game.blit(TextSurf, TextRect)
 
@@ -52,20 +61,44 @@ def message_display(text):
 def crash():
     message_display('You Crashed')
 
+def intro():
+	intro = True
+	while True :
+		for event in pygame.event.get():
+			if event.type == pygame.KEYDOWN:
+				if event.key == pygame.K_SPACE:
+					game_loop()
+			if event.type == pygame.QUIT:
+				pygame.quit()
+				quit()
+		bground(0,0)
+		Ltxt = pygame.font.Font('freesansbold.ttf',50)
+		TextSurf, TextRect =text_objects("Space Dodging", Ltxt, blue)
+    		TextRect.center = ((window_width/2),(window_height/2))
+    		game.blit(TextSurf, TextRect)
+
+		Stxt = pygame.font.Font('freesansbold.ttf',20)
+		TextSurf, TextRect =text_objects("Press spacebar to start", Stxt, green)
+		TextRect.center = ((window_width/2 + 10),(window_height/2 + 50))
+		game.blit(TextSurf, TextRect)
+		pygame.display.update()
+		clock.tick(10)
+		
+
 def game_loop():
+    
+    ax= random.randrange(0,window_width)
+    ay=-200
+    a_speed = 5
+
     x = (window_width * 0.45)
     y = (window_height * 0.8)
 
     x_change = 0
     y_change= 0
 
-    obj_y = -600
-    obj_x = random.randrange(0, window_width )
-    obj_speed = 7
-    obj_width = 100
-    obj_height = 100
     score = 0
-
+    
     gameExit = False
 
     while not gameExit:
@@ -88,37 +121,47 @@ def game_loop():
                  if event.key == pygame.K_UP or event.key == pygame.K_DOWN:
                     y_change = 0
 
+
           x += x_change
           y += y_change
+	  
+          bground(0,0)
+	 
+          pygame.draw.rect(game, black, [ax,ay,a_width,a_height],1)
+	  aroid(ax,ay)
+	  ay += a_speed
 
-          game.fill(white)
+	  scorecard(score)
+        
+	  pygame.draw.rect(game, green, [x,y,ship_width,ship_height],1)
+          sship(x,y) 
 
-          #objects(objx, objy, objw, objh, colour):
-          objects(obj_x, obj_y, obj_width, obj_height, black)
-          obj_y +=obj_speed
+	  pygame.draw.line(game, red, (0,0),(800,0), 4)
+	  pygame.draw.line(game, red, (0,600),(800,600), 8)
 
-          scorecard(score)
-          sship(x,y)
 
           if x + ship_width < 0 :
              x = window_width
+
           if x > window_width :
              x= 0 - ship_width
+
           if y < 0 or y + ship_height > window_height:
              crash()
-          if obj_y > window_height :
-             obj_y = 0 - obj_height
-             obj_x = random.randrange(0,window_width)
-             score += 1
-             obj_speed += 0.5
+	  
+	  if ay > window_height:
+	     ay = -10
+	     ax= random.randrange(0,window_width)
+	     score += 1
 
-          if y < obj_y+obj_height:
-             if ((obj_x) < x) and ((obj_x + obj_width) > x ) or ((x+ship_width) > (obj_x)) and ((x+ship_width) < (obj_x + obj_width)):
-                crash()
+          if (y < (ay + a_height) and (y > ay)) or ((y + ship_height > ay) and (y + ship_height) < (ay + a_height)):
+	     if x < ax and x > ax + a_width or x +ship_width > ax and x < ax + a_width:
+		crash()
 
           pygame.display.update()
           clock.tick(60)
 
+intro()
 game_loop()
 pygame.quit()
 quit()
