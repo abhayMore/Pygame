@@ -35,6 +35,7 @@ background = pygame.image.load('background.jpg')
 asteroid = pygame.image.load('asteroid.png')
 sshipimg = pygame.image.load('ship.png')
 
+pause = True
 
 def buttons(msg,x,y,w,h,ic,ac,action = None):
     mouse = pygame.mouse.get_pos()
@@ -42,7 +43,9 @@ def buttons(msg,x,y,w,h,ic,ac,action = None):
     if x+w > mouse[0] > x and y + h > mouse[1] > y  :		
 		pygame.draw.rect(game, ac,[x,y,w,h])
 		if click[0] ==1 and action != None:
-			if action == "play":
+			if action == "cplay":
+				unpause()		
+			elif action == "play":
 				game_loop()
 			elif action == "back":
 				intro()
@@ -96,7 +99,30 @@ def hit():
     message_display('HIT')
 
 def crash():
-    message_display('You Crashed')
+    message_display('You Crashed...RESTARTING')
+
+def unpause():
+    global pause 
+    pause = False
+
+def paused():
+	while pause :
+		for event in pygame.event.get():
+			if event.type == pygame.QUIT:
+				pygame.quit()
+				quit()		
+			
+						
+		bground(0,0)
+		buttons("PAUSED",320,130,150,50,None,None,"")
+		buttons("CONTINUE!",320,200,150,50,blue,bblue,"cplay")
+		buttons("START!",320,270,150,50,blue,bblue,"play")
+		buttons("BACK",320,340,150,50,green,bgreen,"back")
+		buttons("EXIT",320,410,150,50,red,bred,"quit")
+
+		
+		pygame.display.update()
+		clock.tick(60)
 
 def intro():
 	intro = True
@@ -139,6 +165,7 @@ def menu():
 
 def game_loop():
     
+    global pause
     ax= random.randrange(0,window_width)
     ay=-200
     a_speed = 3
@@ -173,6 +200,9 @@ def game_loop():
                       y_change = 5
                  elif event.key == pygame.K_UP:
                       y_change = -5
+		 elif event.key == pygame.K_ESCAPE:
+		      pause = True
+		      paused()
 		 elif event.key == pygame.K_SPACE:
 		      bullets(x+ ship_width/2,y,x+ ship_width/2,y+10,yellow)
 		 
