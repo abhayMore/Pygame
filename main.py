@@ -9,7 +9,8 @@ from os import path
 bullet_dir = path.join(path.dirname(__file__),'Assets','Images','Lasers')
 ship_dir = path.join(path.dirname(__file__),'Assets','Images','Ships')
 meteor_dir = path.join(path.dirname(__file__),'Assets','Images','Meteors')
-exp_dir = path.join(path.dirname(__file__),'Assets','Images','Explosions')
+ship_exp_dir = path.join(path.dirname(__file__),'Assets','Images','Explosions','ship_explo_dir')
+meteor_exp_dir = path.join(path.dirname(__file__),'Assets','Images','Explosions','meteor_explo_dir')
 snd_dir = path.join(path.dirname(__file__),'Assets','Music')
 img_dir = path.join(path.dirname(__file__),'Assets','Images')
 
@@ -25,48 +26,18 @@ GREY = (128,128,128)
 RED = (150,0,0)
 GREEN = (0,200,0)
 BLUE = (0,0,200)
+
 BRED = (255,0,0)
 BGREEN = (0,255,0)
 BBLUE = (0,0,255)
+
 YELLOW = (255,255,0)
 
 pygame.init() 
 pygame.mixer.init()
 game = pygame.display.set_mode((width,height))
-pygame.display.set_caption("SPACE DOSDGING")
+pygame.display.set_caption("SPACE DODGING")
 clock = pygame.time.Clock()
-
-
-def buttons(msg,x,y,w,h,ic,ac,action = None):
-    mouse = pygame.mouse.get_pos()
-    click = pygame.mouse.get_pressed()
-    if x+w > mouse[0] > x and y + h > mouse[1] > y  :		
-		pygame.draw.rect(game, ac,[x,y,w,h])
-		if click[0] ==1 and action != None:
-			if action == "cplay":
-				unpause()		
-			elif action == "play":
-				menu = False
-				game_loop()
-			elif action == "back":
-				intro()
-			elif action == "quit":
-				pygame.quit()
-				quit()
-			elif action == "nplay":				
-				game_loop()
-    else :	
-		pygame.draw.rect(game, ic,[x,y,w,h])
-
-    smalltxt = pygame.font.Font("freesansbold.ttf",25)
-    txtsurf, txtrect = text_objects(msg, smalltxt,BLACK)
-    txtrect.center = ((x + (w/2)),(y + (h/2)))
-    game.blit(txtsurf, txtrect)
-
-
-def text_objects(text, font,color):
-    txtSurface = font.render(text, True, color)
-    return txtSurface, txtSurface.get_rect()
 
 font_name =pygame.font.match_font('comicsans')
 def draw(surf, text, size, x, y,colour):
@@ -92,7 +63,28 @@ def draw_shield(surf, x, y, perc):
 	pygame.draw.rect(surf, BGREEN, fill_rect)
 	pygame.draw.rect(surf, WHITE, O_rect,2)
 
+def draw_lives(surf, x, y, lives, img):
+	for i in range(lives):
+		img_rect = img.get_rect()
+		img_rect.x = x +35 * i
+		img_rect.y = y
+		surf.blit(img, img_rect)
 
+def show_go_screen():
+	game.blit(bground,bground_rect)
+	draw(game, "Space Dodging", 75, width/2 -160 , height/4,BBLUE)
+	draw(game, "Arrow keys to move, Spacebar to fire", 50, width/2 -295 , height/2,BRED)
+	draw(game, "Press any key", 35, width/2 -65,height*3/4, BGREEN)
+	pygame.display.flip()
+	waiting = True
+	while waiting:
+		clock.tick(FPS)
+		for event in pygame.event.get():
+			if event.type == pygame.QUIT:
+				pygame.quit()
+				quit()
+			if event.type == pygame.KEYUP:
+				waiting = False
 class Player(pygame.sprite.Sprite):
 	def __init__(self):
 		pygame.sprite.Sprite.__init__(self)
@@ -107,8 +99,15 @@ class Player(pygame.sprite.Sprite):
 		self.shield = 100
 		self.shoot_delay = 250
 		self.last_shot = pygame.time.get_ticks()
+		self.lives = 3
+		self.hidden = False
+		self.hide_timer = pygame.time.get_ticks()
 	
 	def update(self):
+		if self.hidden and pygame.time.get_ticks() - self.hide_timer > 1000:
+			self.hidden = False
+			self.rect.centerx = width/2
+			self.rect.bottom = height - 10
 		self.speedx = 0
 		k = pygame.key.get_pressed()
 		if k[pygame.K_LEFT]:
@@ -122,6 +121,7 @@ class Player(pygame.sprite.Sprite):
 			self.rect.right = 0
 		if  self.rect.left + 99< 0:
 			self.rect.left = width 
+		
 	def shoot(self):
 		now = pygame.time.get_ticks()
 		if now - self.last_shot > self.shoot_delay:
@@ -130,6 +130,11 @@ class Player(pygame.sprite.Sprite):
 			all_sprites.add(bullet)
 			bullets.add(bullet)
 			shoot_snd.play()
+	
+	def hide(self):
+		self.hidden = True
+		self.hide_timer= pygame.time.get_ticks()	
+		self.rect.center = (width/2,height + 200)
 
 class Mob(pygame.sprite.Sprite):
 	def __init__(self):
@@ -191,7 +196,7 @@ class explosion(pygame.sprite.Sprite):
 		self.rect.center = center
 		self.frame = 0
 		self.last_update = pygame.time.get_ticks()
-		self.frame_rate = 50
+		self.frame_rate = 75
 	def update(self):
 		now = pygame.time.get_ticks()
 		if now - self.last_update > self.frame_rate:
@@ -212,6 +217,8 @@ bult = pygame.image.load(path.join(bullet_dir,"laserBlue01.png")).convert()
 bground = pygame.image.load(path.join(img_dir,"background.jpg")).convert()
 bground_rect = bground.get_rect()
 ship = pygame.image.load(path.join(ship_dir,"ship.png")).convert()
+mini_ship = pygame.image.load(path.join(ship_dir,"mini_ship.png")).convert()
+mini_ship.set_colorkey(BLACK)
 meteor_img = []
 meteor_list = [ 'meteor1.png','meteor2.png','meteor3.png','meteor4.png','meteor5.png',
 		'meteor6.png','meteor7.png','meteor8.png','meteor9.png','meteor10.png',
@@ -224,16 +231,20 @@ for img in meteor_list :
 explo_anim = {}
 explo_anim['lg'] = []
 explo_anim['sm'] = []
+explo_anim['player'] = []
 
 for i in range(8) :
 	filename = 'Explosion0{}.png'.format(i)
-	img = pygame.image.load(path.join(exp_dir,filename)).convert()
+	img = pygame.image.load(path.join(meteor_exp_dir,filename)).convert()
 	img.set_colorkey(BLACK)
 	img_lg = pygame.transform.scale(img, (75,75))
 	explo_anim['lg'].append(img_lg)
 	img_sm = pygame.transform.scale(img, (32,32))
 	explo_anim['sm'].append(img_sm)
-
+	filename = 'sExplosion0{}.png'.format(i)
+	img = pygame.image.load(path.join(ship_exp_dir,filename)).convert()
+	img.set_colorkey(BLACK)
+	explo_anim['player'].append(img)
 
 #loading sounds and music
 
@@ -242,129 +253,84 @@ pygame.mixer.music.fadeout(2)
 	
 explo_snd = pygame.mixer.Sound(path.join(snd_dir,'explosion.wav'))
 pygame.mixer.music.fadeout(5)
+
+ship_explo_snd = pygame.mixer.Sound(path.join(snd_dir,'rumble1.ogg'))
 	
 pygame.mixer.music.load(path.join(snd_dir,'music.ogg'))
 pygame.mixer.music.set_volume(1)
 	
 	
 	
-all_sprites = pygame.sprite.Group()
-mobs = pygame.sprite.Group()
-bullets = pygame.sprite.Group()
 	
-player = Player()
-all_sprites.add(player)
-	
-for i in range(8):
-	newmob()
+pygame.mixer.music.play()
 
-pause = True
-
-def unpause():
-	global pause
-	pause = False
-
-def paused():
-	while pause :
-		for event in pygame.event.get():
-			if event.type == pygame.QUIT:
-				pygame.quit()
-				quit()		
-		game.blit(bground, bground_rect)	
-		buttons("PAUSED",320,130,150,50,WHITE,WHITE,"")
-		buttons("CONTINUE!",320,200,150,50,WHITE,WHITE,"cplay")
-		buttons("START!",320,270,150,50,BLUE,BBLUE,"nplay")
-		buttons("BACK",320,340,150,50,GREEN,BGREEN,"back")
-		buttons("EXIT",320,410,150,50,RED,BRED,"quit")
-
+game_over = True
+running = True
+while running :
+	if game_over:
+		show_go_screen()
+		game_over = False
+		all_sprites = pygame.sprite.Group()
+		mobs = pygame.sprite.Group()
+		bullets = pygame.sprite.Group()
 		
-		pygame.display.update()
-		clock.tick(60)
-
-def intro():
-	intro = True
-	while intro :
-		for event in pygame.event.get():
-			if event.type == pygame.KEYDOWN:
-				if event.key == pygame.K_SPACE:
-					intro = False					
-					menu()
-					
-			if event.type == pygame.QUIT:
-				pygame.quit()
-				quit()
-		game.blit(bground, bground_rect)
-		draw(game,' Space Dodging',80,width/4,height/4, BBLUE)
-		draw(game,' Press Spacebar to continue',40,width/4 + 25,height/3+80,BRED)		
-		pygame.display.update()
-		clock.tick(60)
-
-def menu():
-	menu = True
-	while True :
-		for event in pygame.event.get():
-			if event.type == pygame.QUIT:
-				pygame.quit()
-				quit()		
-		game.blit(bground, bground_rect)		
-		buttons("START!",320,200,150,50,BLUE,BBLUE,"play")
-		buttons("BACK",320,270,150,50,GREEN,BGREEN,"back")
-		buttons("EXIT",320,340,150,50,RED,BRED,"quit")
-
-		
-		pygame.display.update()
-		clock.tick(60)	
-
-def game_loop():	
-	score = 0
-	global pause
+		player = Player()
+		all_sprites.add(player)
 	
-	pygame.mixer.music.play()
-	running = True
-	while running :
+		for i in range(8):
+			newmob()
 	
-		clock.tick(FPS)
-		for event in pygame.event.get():
-			if event.type == pygame.QUIT:
-				pygame.quit()
-				quit()
-			if event.type == pygame.KEYDOWN:
-				if event.key == pygame.K_ESCAPE:
-					player.shoot()
-				if event.key == pygame.K_ESCAPE:
-					pause = True
-					paused()
+		score = 0
+
+	clock.tick(FPS)
+	for event in pygame.event.get():
+		if event.type == pygame.QUIT:
+			pygame.quit()
+			quit()
+		if event.type == pygame.KEYDOWN:
+			if event.key == pygame.K_ESCAPE:
+				player.shoot()
+			if event.key == pygame.K_ESCAPE:
+				pause = True
+				paused()
 	
 			
-		all_sprites.update()
-		hits = pygame.sprite.groupcollide(mobs, bullets, True, True)
+	all_sprites.update()
+	hits = pygame.sprite.groupcollide(mobs, bullets, True, True)
 		
-		for hit in hits :
-			score += 50 - hit.radius
-			explo_snd.play()	
-			expl = explosion(hit.rect.center,'lg')
-			all_sprites.add(expl)	
-			newmob()
+	for hit in hits :
+		score += 50 - hit.radius
+		explo_snd.play()	
+		expl = explosion(hit.rect.center,'lg')
+		all_sprites.add(expl)	
+		newmob()
 	   
-		hits = pygame.sprite.spritecollide(player, mobs, True, pygame.sprite.collide_circle)
+	hits = pygame.sprite.spritecollide(player, mobs, True, pygame.sprite.collide_circle)
 	
-		for hit in hits :
-			player.shield -= hit.radius * 2
-			explo_snd.play()							
-			expl = explosion(hit.rect.center,'sm')
-			all_sprites.add(expl)	
-			newmob()		
-			if player.shield <= 0 :		
-				menu()
+	for hit in hits :
+		player.shield -= hit.radius * 2					
+		expl = explosion(hit.rect.center,'sm')
+		all_sprites.add(expl)	
+		newmob()		
+		if player.shield <= 0 :	
+			ship_explo_snd.play()
+			death_exp = explosion(player.rect.center, 'player')
+			all_sprites.add(death_exp)	
+			player.hide()
+			player.lives -= 1
+			player.shield = 100
+				
+	if player.lives == 0 and not death_exp.alive() :
+		game_over = True
 	
-		#game.fill(BLACK)
-		game.blit(bground, bground_rect)
-		all_sprites.draw(game)
-		draw(game, 'score ='+str(score),30,width-120,0,BGREEN)
-		draw_shield(game, 5, 5, player.shield)
-		pygame.display.update()
-intro()
-menu()
-game_loop()	
+	#game.fill(BLACK)
+	game.blit(bground, bground_rect)
+	all_sprites.draw(game)
+	draw(game, 'score ='+str(score),30,width-120,0,BGREEN)
+	draw_shield(game, 5, 5, player.shield)
+	draw_lives(game, 0, 20, player.lives, mini_ship)
+	pygame.display.update()
+
+
 pygame.quit()
 quit()
