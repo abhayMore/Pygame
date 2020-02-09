@@ -1,4 +1,4 @@
-# Pygame
+# SPACE DODGING
 A Space-shooting based game 
 
 Start Screen
